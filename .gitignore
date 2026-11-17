@@ -155,9 +155,6 @@ test-results/
 .features-gen/
 cucumber-report/
 
-# Local test secrets
-/test-data/login-secrets.json
-
 # Environment variables and secrets
 .env
 .env.*
