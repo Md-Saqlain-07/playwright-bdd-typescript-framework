@@ -147,3 +147,26 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+
+# Playwright generated files
+playwright-report/
+test-results/
+.features-gen/
+cucumber-report/
+
+# Local test secrets
+/test-data/login-secrets.json
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+
+# Editor files
+.vscode/*
+!.vscode/extensions.json

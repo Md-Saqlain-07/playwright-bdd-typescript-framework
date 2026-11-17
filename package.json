@@ -1,0 +1,35 @@
+{
+  "name": "playwright-bdd-typescript-framework",
+  "version": "1.0.0",
+  "description": "Professional test automation framework using Playwright, TypeScript, BDD, Gherkin and Page Object Model.",
+  "scripts": {
+    "bdd:generate": "bddgen",
+    "test": "bddgen && playwright test",
+    "test:headed": "bddgen && playwright test --headed",
+    "test:ui": "bddgen && playwright test --ui",
+    "test:smoke": "bddgen && playwright test --grep @smoke",
+    "test:all-viewports": "bddgen && playwright test --project=desktop-1440 --project=tablet-768 --project=mobile-375",
+    "test:debug": "bddgen && playwright test --debug",
+    "report": "playwright show-report",
+    "report:cucumber": "playwright show-report cucumber-report",
+    "typecheck": "tsc --noEmit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Md-Saqlain-07/playwright-bdd-typescript-framework.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Md-Saqlain-07/playwright-bdd-typescript-framework/issues"
+  },
+  "homepage": "https://github.com/Md-Saqlain-07/playwright-bdd-typescript-framework#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "@types/node": "^26.6.6",
+    "playwright-bdd": "^9.2.1",
+    "typescript": "^7.0.2"
+  }
+}
