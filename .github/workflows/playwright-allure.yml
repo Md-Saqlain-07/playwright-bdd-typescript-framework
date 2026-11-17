@@ -14,12 +14,18 @@ permissions:
   contents: read
 
 jobs:
+
+  # ==========================================
+  # JOB 1: Execute Playwright BDD Tests
+  # ==========================================
+
   playwright-tests:
     name: Execute BDD Tests
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Download source code
+
+      # 1. Checkout Repository
       - name: Checkout Repository
         uses: actions/checkout@v6
 
@@ -30,15 +36,15 @@ jobs:
           node-version: 22
           cache: npm
 
-      # 3. Install dependencies
+      # 3. Install Dependencies
       - name: Install Dependencies
         run: npm ci
 
-      # 4. Install Playwright browsers
+      # 4. Install Playwright Browsers
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
-      # 5. Generate BDD tests and execute
+      # 5. Generate BDD Tests and Execute
       - name: Run Playwright BDD Tests
         id: tests
         continue-on-error: true
@@ -46,47 +52,177 @@ jobs:
           npx bddgen
           npx playwright test
 
-      # 6. Generate Allure HTML report
+      # 6. Generate Allure HTML Report
       - name: Generate Allure Report
         if: always()
         run: |
           if [ -d allure-results ] && [ "$(find allure-results -type f | wc -l)" -gt 0 ]; then
-            npx allure generate ./allure-results
+            npx allure generate ./allure-results --clean
           else
             echo "No Allure results found."
           fi
 
-      # 7. Upload Allure report
-      - name: Upload Allure HTML Report
+      # 7. Prepare Reports for GitHub Pages
+      - name: Prepare GitHub Pages
         if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: Allure-HTML-Report
-          path: allure-report/
-          if-no-files-found: warn
-          retention-days: 30
+        run: |
+          mkdir -p site/allure
+          mkdir -p site/playwright
+          mkdir -p site/cucumber
 
-      # 8. Upload Playwright HTML report
-      - name: Upload Playwright HTML Report
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: Playwright-HTML-Report
-          path: playwright-report/
-          if-no-files-found: warn
-          retention-days: 30
+          # Copy Allure Report
+          if [ -d allure-report ]; then
+            cp -r allure-report/. site/allure/
+          else
+            echo "Allure report was not generated."
+          fi
 
-      # 9. Upload Cucumber HTML report
-      - name: Upload Cucumber HTML Report
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: Cucumber-HTML-Report
-          path: cucumber-report/
-          if-no-files-found: warn
-          retention-days: 30
+          # Copy Playwright HTML Report
+          if [ -d playwright-report ]; then
+            cp -r playwright-report/. site/playwright/
+          else
+            echo "Playwright report was not generated."
+          fi
 
-      # 10. Preserve failed test status
+          # Copy Cucumber HTML Report
+          if [ -d cucumber-report ]; then
+            cp -r cucumber-report/. site/cucumber/
+          else
+            echo "Cucumber report was not generated."
+          fi
+
+          # Create Reports Dashboard
+          cat > site/index.html <<'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Playwright BDD Automation Reports</title>
+            <style>
+              body {
+                font-family: Arial, sans-serif;
+                background: #f4f6f9;
+                margin: 0;
+                padding: 50px 20px;
+                text-align: center;
+              }
+
+              .container {
+                max-width: 700px;
+                margin: auto;
+                background: white;
+                padding: 35px;
+                border-radius: 12px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+              }
+
+              h1 {
+                color: #1e293b;
+              }
+
+              p {
+                color: #64748b;
+              }
+
+              a {
+                display: block;
+                padding: 16px;
+                margin: 18px 0;
+                background: #2563eb;
+                color: white;
+                text-decoration: none;
+                border-radius: 8px;
+                font-weight: bold;
+              }
+
+              a:hover {
+                background: #1d4ed8;
+              }
+
+              .footer {
+                margin-top: 30px;
+                font-size: 13px;
+                color: #94a3b8;
+              }
+            </style>
+          </head>
+
+          <body>
+            <div class="container">
+              <h1>Playwright BDD Automation</h1>
+              <p>Automation Execution Reports</p>
+
+              <a href="allure/">Open Allure HTML Report</a>
+
+              <a href="playwright/">Open Playwright HTML Report</a>
+
+              <a href="cucumber/">Open Cucumber HTML Report</a>
+
+              <div class="footer">
+                Generated using GitHub Actions
+              </div>
+            </div>
+          </body>
+          </html>
+          EOF
+
+          # Disable Jekyll processing
+          touch site/.nojekyll
+
+      # 8. Upload GitHub Pages Artifact
+      - name: Upload GitHub Pages Artifact
+        if: always() && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site/
+
+      # 9. Check Test Execution Status
       - name: Check Test Execution Status
         if: always() && steps.tests.outcome == 'failure'
         run: exit 1
+
+
+  # ==========================================
+  # JOB 2: Deploy Reports to GitHub Pages
+  # ==========================================
+
+  deploy-reports:
+    name: Publish Automation Reports
+
+    needs: playwright-tests
+
+    if: always() && github.event_name != 'pull_request' && needs.playwright-tests.result != 'cancelled'
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+
+      # 10. Configure GitHub Pages
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      # 11. Deploy Reports Website
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      # 12. Display Report URLs
+      - name: Display Report URLs
+        if: success()
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          echo "## Automation Reports" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [Allure Report](${PAGE_URL}allure/)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [Playwright Report](${PAGE_URL}playwright/)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [Cucumber Report](${PAGE_URL}cucumber/)" >> "$GITHUB_STEP_SUMMARY"
