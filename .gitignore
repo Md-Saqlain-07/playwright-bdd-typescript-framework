@@ -170,3 +170,7 @@ logs/
 # Editor files
 .vscode/*
 !.vscode/extensions.json
+
+# Allure generated reports
+allure-results/
+allure-report/

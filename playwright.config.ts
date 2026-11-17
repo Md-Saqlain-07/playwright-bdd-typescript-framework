@@ -24,19 +24,33 @@ export default defineConfig({
     timeout: 5_000,
   },
 
-  reporter: [
-    ['list'],
-    [
-      'html',
-      {
-        outputFolder: 'playwright-report',
-        open: 'never',
-      },
-    ],
-    cucumberReporter('html', {
-      outputFile: 'cucumber-report/index.html',
-    }),
+  
+reporter: [
+  ['list'],
+
+  // Existing Playwright HTML report
+  [
+    'html',
+    {
+      outputFolder: 'playwright-report',
+      open: 'never',
+    },
   ],
+
+  // Existing Cucumber HTML report
+  cucumberReporter('html', {
+    outputFile: 'cucumber-report/index.html',
+  }),
+
+  // New Allure report
+  [
+    'allure-playwright',
+    {
+      resultsDir: 'allure-results',
+    },
+  ],
+],
+
 
   use: {
     headless: true,
