@@ -1,0 +1,92 @@
+
+name: Playwright BDD Automation with Allure
+
+on:
+  push:
+    branches: [main]
+
+  pull_request:
+    branches: [main]
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  playwright-tests:
+    name: Execute BDD Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Download source code
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      # 2. Configure Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      # 3. Install dependencies
+      - name: Install Dependencies
+        run: npm ci
+
+      # 4. Install Playwright browsers
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      # 5. Generate BDD tests and execute
+      - name: Run Playwright BDD Tests
+        id: tests
+        continue-on-error: true
+        run: |
+          npx bddgen
+          npx playwright test
+
+      # 6. Generate Allure HTML report
+      - name: Generate Allure Report
+        if: always()
+        run: |
+          if [ -d allure-results ] && [ "$(find allure-results -type f | wc -l)" -gt 0 ]; then
+            npx allure generate ./allure-results
+          else
+            echo "No Allure results found."
+          fi
+
+      # 7. Upload Allure report
+      - name: Upload Allure HTML Report
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: Allure-HTML-Report
+          path: allure-report/
+          if-no-files-found: warn
+          retention-days: 30
+
+      # 8. Upload Playwright HTML report
+      - name: Upload Playwright HTML Report
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: Playwright-HTML-Report
+          path: playwright-report/
+          if-no-files-found: warn
+          retention-days: 30
+
+      # 9. Upload Cucumber HTML report
+      - name: Upload Cucumber HTML Report
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: Cucumber-HTML-Report
+          path: cucumber-report/
+          if-no-files-found: warn
+          retention-days: 30
+
+      # 10. Preserve failed test status
+      - name: Check Test Execution Status
+        if: always() && steps.tests.outcome == 'failure'
+        run: exit 1
